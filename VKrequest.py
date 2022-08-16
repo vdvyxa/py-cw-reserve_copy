@@ -23,8 +23,8 @@ class VKRequest:
             full_path = os.path.join(root_path, token_file)
             # считывание из файла метки и сохранение в классе (self.token)
             with open(full_path) as f_token:
-                self.user_id = f_token.read()       
-                self.token = f_token.read()       
+                self.user_id = f_token.readline().strip()
+                self.token = f_token.readline().strip()
 
 #####################################################################
 
@@ -45,20 +45,23 @@ class VKRequest:
     #   словарь с данными параметров {}
     def _make_params(self):
         return {
-            'access_token': self.token
+            'access_token': self.token,
+            'v': '5.131'
         }
 
 #####################################################################
 
     def get_user_photos(self, user_id, photos_count = 5):
-        url = 'https://api.vk.com/method/photos.getAll'
+        url = 'https://api.vk.com/method/photos.get'
         params = {
             'owner_id': user_id,    # ID пользователя, чьи фотографии хотим получить
             'extended': 1,          # вернуть доп.информацию (число лайков, репостов)
             'count': photos_count,  # число фотографий
-            'photo_sizes': 1        # получать информацию о размерах фото в специальном формате
+            'photo_sizes': 1,        # получать информацию о размерах фото в специальном формате\
+            'album_id': 'wall'
         }
         response = requests.get(url, headers = self._make_header(), params={**self._make_params(), **params})
+        print(response)
         if response.ok:
             return response.json()
         return False
