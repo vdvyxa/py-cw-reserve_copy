@@ -61,7 +61,7 @@ class VKRequest:
     # { Словарь следующего типа:
     # { 'count',
     #   'items': [
-    #              { 'album_id', 'comments', 'date', 'id', 'owner_id', 'text',
+    #              { 'id', 'owner_id', 'album_id', 'comments', 'date', 'text',
     #                'likes': {'count', 'user_likes'},
     #                'sizes': [
     #                            { 'height', 'width', 'type', 'url'}
