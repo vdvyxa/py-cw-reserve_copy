@@ -51,19 +51,35 @@ class VKRequest:
 
 #####################################################################
 
-    def get_user_photos(self, user_id, photos_count = 5):
+
+    # Возвращает фото с указанной учетной записи и указанного альбома
+    # PARAMS
+    #   USER_ID - ID пользователя в VK
+    #   PHOTOS_COUNT - количество получаемых фото (по умолчанию, 5)
+    #   ALBUM - из какого альбома ('wall', 'profile', 'saved') (по умолчанию, 'wall')
+    # RETURN
+    # { Словарь следующего типа:
+    # { 'count',
+    #   'items': [
+    #              { 'album_id', 'comments', 'date', 'id', 'owner_id', 'text',
+    #                'likes': {'count', 'user_likes'},
+    #                'sizes': [
+    #                            { 'height', 'width', 'type', 'url'}
+    #                         ]
+    #              }
+    #            ]
+    def get_user_photos(self, user_id, photos_count = 5, album = 'wall'):
         url = 'https://api.vk.com/method/photos.get'
         params = {
             'owner_id': user_id,    # ID пользователя, чьи фотографии хотим получить
             'extended': 1,          # вернуть доп.информацию (число лайков, репостов)
             'count': photos_count,  # число фотографий
-            'photo_sizes': 1,        # получать информацию о размерах фото в специальном формате\
-            'album_id': 'wall'
+            'photo_sizes': 1,       # получать информацию о размерах фото в специальном формате\
+            'album_id': album
         }
         response = requests.get(url, headers = self._make_header(), params={**self._make_params(), **params})
-        print(response)
         if response.ok:
-            return response.json()
+            return response.json()['response']
         return False
 
    

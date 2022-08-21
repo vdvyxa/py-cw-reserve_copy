@@ -13,6 +13,7 @@ class YaDiskRequest:
     def __init__(self, token = '', token_file = 'ya_token'):
         self.token = token
         self.token_file = token_file
+        self.name = 'YaDisk'
         
         # Получение токена из файла, если не задан явно
         if not self.token: 
@@ -77,7 +78,12 @@ class YaDiskRequest:
         root_path = os.getcwd()
         full_path = os.path.join(root_path, file_path)
         # Список файлов по пути full_path
-        files = os.listdir(full_path)
+        files = []
+        try:
+            files = os.listdir(full_path)
+        except FileNotFoundError:
+            print(f'Error {__name__} - Путь "{full_path}" не существует!')
+ 
         # счетчик загруженных файлов
         count_uploaded = 0
         
