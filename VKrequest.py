@@ -79,7 +79,7 @@ class VKRequest:
         }
         response = requests.get(url, headers = self._make_header(), params={**self._make_params(), **params})
         if response.ok:
-            return response.json()['response']
+            return response.json()['response']['items']
         return False
 
    

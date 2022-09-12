@@ -1,3 +1,4 @@
+from operator import ge
 import os
 from pprint import pprint
 import requests
@@ -47,17 +48,20 @@ from yaDiskRequest import YaDiskRequest
 #   }
 def get_max_photo_size(photo):
     result = {}
-    
-    # TODO
-    # В цикле по списку 'sizes' найти элемент, у которого наибольшее разрешение (width*height)
-    # и вернуть следующий словарь:
-    #   { 'size': 'l' (буква из поля 'type')
-    #     'url': url (поле 'url')
-    #   }
+    max = 0
+    # цикл по массивам фоток
+    for sizes in photo['sizes']:
+        # если размер очередной фотки больше сохраненного в max
+        if sizes['width'] * sizes['height'] > max:
+            # сохраняем новый максимальный размер фотки
+            max = sizes['width'] * sizes['height']
+            # сохраняем саму фотку с максимальным размером
+            result = {
+                'size': sizes['type'],
+                'url': sizes['url']
+            }
 
     return result
-
-
 
 #####################################################################
 
@@ -67,34 +71,64 @@ def get_max_photo_size(photo):
 # RETURN
 #   расширение файла (строка)
 def get_photo_extension(url):
-    ext = ''
-
-    # TODO
-    # Написать код, который разбивает строку url на части по ключевому символу точка ('.')
-    # и возвращает последнюю часть (это и есть расширение файла)
+    # разделяем строку по точкам('.') и берем последнюю часть ([-1])
+    ext = url.split('.')[-1]
+    # разделяем строку по вопросу ('?' и берем первую часть(до первого знака вопроса)
+    # - это и есть само расширение файла
+    ext = ext.split('?')[0]
     
     return ext
 
+#####################################################################
 
+# Функция получения имени файла по данным из ВК
+# формат имени: "лайки_дата.расширение"
+# PARAMS
+#   PHOTO - данные о фото (формат ВК) (словарь)
+#   URL - URL фото, которое надо сохранить
+# RETURN
+#   имя сохраненного файла (без пути)
+def get_photo_filename(photo, url):
+    filename = f'{photo["likes"]["count"]}_{photo["date"]}.{get_photo_extension(url)}'
+    return filename
 
 #####################################################################
 
-# Функция сохранения фото во временной папке
+# Функция сохранения фото с максимальным разрешением во временной папке
 # PARAMS
-#   PHOTO - словарь с данными о фото (формат ВК)
+#   PHOTO - данные о фото (формат ВК) (словарь)
 #   TMP_FOLDER - папка, в которой сохранять файл
-# RETURN
-#   имя сохраненного файла (без пути)
-def save_photo(photo, tmp_folder):
+# RETURN словарь
+#   {'filename', 'url', 'size'}
+#   ИЛИ пусто {} (если файл не удалось скачать)
+def save_max_photo(photo, tmp_folder):
+    result = {}
+    # поиск фото с максимальным разрешением
     photo_size = get_max_photo_size(photo)
-    # имя файла "лайки_дата.расширение"
-    filename = f'{photo.likes.count}_{photo.date}.{get_photo_extension(photo_size.url)}'
+    # имя файла
+    filename = get_photo_filename(photo, photo_size['url'])
 
-    # TODO
-    # Написать код, который берет данные по URL из photo_size['url']
-    # и сохраняет в виде файла с именем filename в папке tmp_folder
+    # получаем полный путь
+    root_path = os.getcwd()
+    # абсолютный путь файла
+    file_full_path = os.path.join(root_path, tmp_folder, filename)
 
-    return filename
+    # скачивание файла по URL
+    data = requests.get(photo_size['url'])
+    # проверка на ошибку
+    if data.ok:
+        # сохранение файла
+        with open(file_full_path, 'wb') as f: 
+            f.write(data.content)
+        # сохранение результата
+        result = {
+            'filename': filename,
+            'url': photo_size['url'],
+            'size': photo_size['size']
+        }
+
+    return result 
+
 
 #####################################################################
 
@@ -105,7 +139,7 @@ def save_photo(photo, tmp_folder):
 # RETURN
 #   итоговый список в формате:
 #   [ {
-#       'file_name': имя файла
+#       'filename': имя файла
 #       'size': буква-идентификатор размера фото
 #       'url': url для скачивания фото выбранного размерешния
 #   },
@@ -115,20 +149,31 @@ def save_photo(photo, tmp_folder):
 def parse_data_to_files(data, tmp_folder = 'temp'):
     result = []
     
-    # TODO
-    # в цикле по списку DATA сделать следующее:
-    #   1. Найти наибольший размер фото (по массиву 'sizes')
-    #   2. Сохранить файл из соответствующей ссылке (поле 'url' в массиве 'sizes') в папке tmp_folder.
-    #      Имя файла задать следующее: "{число_лайков}_{дата_загрузки}.расширение". Например '14_67890876.jpg'
-    #   3. Добавить в итоговый список (result) следующую запись:
-    #      { 'file_name': имя_сохраненного_файла,
-    #        'size': 'l' (буква в поле 'type' выбранного размера фото в массиве 'sizes')
-    #        'url': url (поле 'url' выбранного размера фото в массиве 'sizes')
-    #      }
-    # Функция возвращает итоговый список (result)
-    
+    # цикл по всем фото
+    for photo in data:
+        # сохранение фотот с макасимальным разрешением
+        # и получение сведений об этом фото
+        saved_photo = save_max_photo(photo, tmp_folder)
+        result += [saved_photo]
+
     return result
 
+#####################################################################
+
+# Функция создания папки
+# PARAMS
+#   FOLDER - папка (по умолчанию, 'temp')
+# RETURN
+#   TRUE или FALSE (если ошибка создания)
+def create_folder(folder = 'temp'):
+    # получаем полный путь
+    root_path = os.getcwd()
+    # проверка, что папки еще нет
+    if not os.path.isdir(os.path.join(root_path, folder)):
+        os.mkdir(os.path.join(root_path, folder))
+    return True
+
+#####################################################################
 
 # Функция удаления всех файлов из папки и самой папки
 # PARAMS
@@ -136,14 +181,22 @@ def parse_data_to_files(data, tmp_folder = 'temp'):
 # RETURN
 #   TRUE или FALSE (если ошибка удаления)
 def delete_folder(folder = 'temp'):
-    # TODO
-    # 1. Удалить все файлы из папки folder
-    # 2. Удалить саму папку
-    # 3. Если все успешно - вернуть True, иначе False
+    # получаем полный путь
+    root_path = os.getcwd()
+    # получаем список всех файлов по указанному пути
+    files = os.listdir(os.path.join(root_path, folder))
+
+    # в цикле удаляем каждый файл
+    for file in files:
+        # если встретили подкаталог - удаляем его
+        if os.path.isdir(os.path.join(root_path, folder, file)):
+            delete_folder(os.path.join(folder, file))
+        os.remove(os.path.join(root_path, folder, file))
+    # в конце удаяем саму папку
+    os.rmdir(os.path.join(root_path, folder))
     
-    return False
-
-
+    # если папки больше нет - возвращаем TRUE
+    return not os.path.isdir(os.path.join(root_path, folder))
 
 #####################################################################
 
@@ -188,6 +241,11 @@ if __name__ == '__main__':
     photos = vk_request.get_user_photos(vk_user_id)
     #pprint(photos)
     
+    # for photo in photos:
+    #     pprint(photo)
+    
+    # создание временной папки
+    create_folder(temp_folder)
     # обработка данных и сохранение фото во временной папке
     datainfo = parse_data_to_files(photos, temp_folder)
     
@@ -200,6 +258,7 @@ if __name__ == '__main__':
     # Вывод информации на экран
     print(f'Totat {len(photos)} photos, {files_count} files saved and {uploaded_count} uploaded.')
     
+    pprint(datainfo)
     # Удаление временной папки - очистка следов
     delete_folder(temp_folder)
 
