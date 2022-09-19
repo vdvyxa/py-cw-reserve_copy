@@ -50,7 +50,7 @@ def get_max_photo_size(photo):
     result = {}
     max = 0
     # цикл по массивам фоток
-    for sizes in photo['sizes']:
+    for sizes in photo.get('sizes', []):
         # если размер очередной фотки больше сохраненного в max
         if sizes['width'] * sizes['height'] > max:
             # сохраняем новый максимальный размер фотки
@@ -106,7 +106,7 @@ def save_max_photo(photo, tmp_folder):
     # поиск фото с максимальным разрешением
     photo_size = get_max_photo_size(photo)
     # имя файла
-    filename = get_photo_filename(photo, photo_size['url'])
+    filename = get_photo_filename(photo, photo_size.get('url',''))
 
     # получаем полный путь
     root_path = os.getcwd()
@@ -239,12 +239,12 @@ if __name__ == '__main__':
     vk_user_id = vk_request.user_id
     # получение фото из ВК
     photos = vk_request.get_user_photos(vk_user_id)
+
+    print(f'{len(photos)} photos loaded from VK.')
+ 
     #pprint(photos)
     
-    # for photo in photos:
-    #     pprint(photo)
-    
-    # создание временной папки
+     # создание временной папки
     create_folder(temp_folder)
     # обработка данных и сохранение фото во временной папке
     datainfo = parse_data_to_files(photos, temp_folder)
@@ -252,13 +252,19 @@ if __name__ == '__main__':
     # подсчет количества полученных файлов с фото
     files_count = get_files_count(temp_folder)
     
+    print(f'{files_count} files saved in {temp_folder}.')
+
     # загрузка файлов с фото на YaDisk
     uploaded_count = ya_request.upload_files(temp_folder, ya_folder)
-    
+
+    print(f'{uploaded_count} files uploaded to Ya.Disk.')
+ 
     # Вывод информации на экран
     print(f'Totat {len(photos)} photos, {files_count} files saved and {uploaded_count} uploaded.')
     
+    print('\nDATAINFO')
     pprint(datainfo)
+
     # Удаление временной папки - очистка следов
     delete_folder(temp_folder)
 
